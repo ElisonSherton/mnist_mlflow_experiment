@@ -34,7 +34,7 @@ class Trainer:
         # Get or create an experiment object
         experiment = self.mlflow_client.get_experiment_by_name(experiment_name)
         if not experiment:
-            self.client.create_experiment(name = experiment_name, tags=experiment_tags)
+            self.client.create_experiment(name = experiment_name, tags = experiment_tags)
             experiment = self.mlflow_client.get_experiment_by_name(experiment_name)
         
         # Store this experiment object as a variable in the trainer object
@@ -94,7 +94,7 @@ class Trainer:
             
             start = time.time()
             self._train_epoch(epoch)
-            epoch_training_time = round(time.time() - start, 2)
+            epoch_training_time = round(time.time() - start, 2)            
 
             start = time.time()
             self._validate_epoch(epoch)
