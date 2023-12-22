@@ -84,12 +84,20 @@ class Trainer:
         if mlflow.active_run():
             mlflow.log_metric("Validation/Accuracy", acc_metric, epoch)
 
+    def hyperparam_tune(self, run_tags = {}, nested = False):
+        # Check with different epochs configuration i.e. 2, 5, 10 epochs respectively
+        run = mlflow.start_run(experiment_id = self.experiment.experiment_id, tags = run_tags, nested = nested)
+        for idx, epochs in enumerate([5, 8, 10], start = 1):
+            self.epochs = epochs
+            self.train(run_tags = {"stage": f"tuning experiment #{idx} with {epochs} epochs", "intent": "Check how many epochs are best for training"}, nested = True)
+        mlflow.end_run()
 
-    def train(self, run_tags = {}):
+    def train(self, run_tags = {}, nested = False):
 
         # Create an MLFlow run to track all the important things
         # run = self.mlflow_client.create_run(self.experiment.experiment_id, tags = run_tags,)
-        run = mlflow.start_run(experiment_id=self.experiment.experiment_id, tags = run_tags)
+        
+        run = mlflow.start_run(experiment_id=self.experiment.experiment_id, tags = run_tags, nested = nested)
         self._log_git_state()
         parent_run = run
 
@@ -108,9 +116,21 @@ class Trainer:
             epoch_validation_time = round(time.time() - start, 2)
             if mlflow.active_run():
                 mlflow.log_metric("Valid/Epoch_Time", epoch_validation_time, epoch)
+        
+        # End the run which was created above
+        mlflow.end_run()
             
     def test(self):
         pass
 
 learner = Trainer(EXP_NAME, EXP_TAGS)
-learner.train(run_tags = {"intent": "manually log git-repo information"})
+
+run = mlflow.start_run(experiment_id = learner.experiment.experiment_id, 
+                       tags = {"stage": "main_experiment", "intent": "Train a whole pipeline with multiple steps i.e. hyperparam tuning and then training with best params"}, nested = False)
+
+learner.hyperparam_tune(run_tags = {"stage": "tuning_parameters", "intent": "check hyperparameter tuning for nesting runs"}, nested = True)
+
+learner.train(run_tags = {"stage": "final_training", "intent": "create final model with best parameters"}, nested = True)
+
+# End the top level run
+mlflow.end_run()
