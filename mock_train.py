@@ -1,23 +1,26 @@
 from data import *
 from model import *
 from utils import *
-import time
+import time, os
 from mlflow import MlflowClient
 import mlflow, random, git
 
+
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-MLFLOW_TRACKING_HOST = "http://127.0.0.1"
-MLFLOW_TRACKING_PORT = "5000"
+MLFLOW_TRACKING_HOST = "https://mlflow.theeigens.com"
+MLFLOW_TRACKING_PORT = ""
 ENABLE_SYSTEM_LOGGING = True
-EXP_NAME = "mlflow_features_exploration"
+EXP_NAME = "temporary"
 EXP_TAGS = {"description": "Explore MLFlow Features",
             "purpose": "To check if MLFlow can be used as the default Experiment tracking platform for Perfios DS Team"}
+PARENT_RUN = "vinayak_14_feb_21_13_parent_run"
+
 
 if ENABLE_SYSTEM_LOGGING:
     mlflow.enable_system_metrics_logging()
 
 class Trainer:
-    def __init__(self, exp_name, exp_tags = {}, steps_per_epoch = 100, epochs=10, batch_size=64, num_workers=4, lr = 0.0001, mlflow_args = {}):
+    def __init__(self, exp_name, exp_tags = {}, steps_per_epoch = 10, epochs=3, batch_size=64, num_workers=4, lr = 0.0001, mlflow_args = {}):
 
         self.model = None
         
@@ -29,8 +32,8 @@ class Trainer:
 
     def _init_mlflow(self, experiment_name, experiment_tags):
         # Create an mlflow client and set the tracking URI
-        self.mlflow_client = MlflowClient(tracking_uri=f"{MLFLOW_TRACKING_HOST}:{MLFLOW_TRACKING_PORT}")
-        mlflow.set_tracking_uri(f"{MLFLOW_TRACKING_HOST}:{MLFLOW_TRACKING_PORT}")
+        self.mlflow_client = MlflowClient(tracking_uri=f"{MLFLOW_TRACKING_HOST}")#:{MLFLOW_TRACKING_PORT}")
+        mlflow.set_tracking_uri(f"{MLFLOW_TRACKING_HOST}")#:{MLFLOW_TRACKING_PORT}")
 
         # Get or create an experiment object
         experiment = self.mlflow_client.get_experiment_by_name(experiment_name)
@@ -125,8 +128,22 @@ class Trainer:
 
 learner = Trainer(EXP_NAME, EXP_TAGS)
 
-run = mlflow.start_run(experiment_id = learner.experiment.experiment_id, 
-                       tags = {"stage": "main_experiment", "intent": "Train a whole pipeline with multiple steps i.e. hyperparam tuning and then training with best params"}, nested = False)
+# Search all the runs in the given experiment
+runs = mlflow.search_runs([learner.experiment.experiment_id])
+
+# Seek if the run exists and get the run ID
+existing_run_id = runs[runs["tags.mlflow.runName"] == PARENT_RUN]
+rid = ""
+if len(existing_run_id) > 0:
+    rid = existing_run_id.run_id.iloc[0]
+
+if rid ! = "":
+    run = mlflow.start_run(experiment_id = learner.experiment.experiment_id, run_id = rid,
+                           tags = {"stage": "main_experiment", "intent": "Train a whole pipeline with multiple steps i.e. hyperparam tuning and then training with best params"}, nested = False)
+else:
+    run = mlflow.start_run(experiment_id = learner.experiment.experiment_id, run_id = rid,
+                           tags = {"stage": "main_experiment", "intent": "Train a whole pipeline with multiple steps i.e. hyperparam tuning and then training with best params"}, nested = False)
+    
 
 learner.hyperparam_tune(run_tags = {"stage": "tuning_parameters", "intent": "check hyperparameter tuning for nesting runs"}, nested = True)
 
