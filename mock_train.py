@@ -7,7 +7,6 @@ import mlflow, random, git
 
 
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-MLFLOW_TRACKING_HOST = "https://mlflow.theeigens.com"
 MLFLOW_TRACKING_PORT = ""
 ENABLE_SYSTEM_LOGGING = True
 EXP_NAME = "temporary"
